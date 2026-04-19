@@ -1,0 +1,39 @@
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Credenciais
+credentials.json
+token.json
+*.pem
+*.key
+*.p12
+
+# Temporários do harness
+.tmp/
+.harness/skills/.index-cache.json
+
+# Node
+node_modules/
+dist/
+.next/
+out/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Editores
+.DS_Store
+.idea/
+.vscode/settings.json
+*.swp
+
+# Logs
+*.log
+logs/
