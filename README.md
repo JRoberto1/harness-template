@@ -36,14 +36,9 @@ um modelo probabilístico em um sistema confiável em produção.
 
 ## Instalação
 
-> Requisito: [Node.js](https://nodejs.org) instalado (versão 16 ou superior).
-
 ```bash
 npx harness-engineering
 ```
-
-O instalador pergunta o nome do projeto, a stack e os domínios ativos.
-Em menos de 1 minuto tudo está configurado.
 
 ### Verificar
 
@@ -71,133 +66,151 @@ cd meu-projeto-existente
 npx harness-engineering
 ```
 
-O instalador detecta que o projeto já existe e faz a adoção sem sobrescrever nada —
-faz backup de qualquer arquivo que precisar substituir e gera um relatório
-com os próximos passos específicos para o seu projeto.
-
 ---
 
 ## Como Usar no Dia a Dia
 
-### Iniciar qualquer tarefa
+### Prompt universal (todos os runtimes)
 
 ```
-Leia o AGENTS.md e os domínios ativos em .harness/domains/.
+Leia .harness/index.md e carregue apenas a directive com match para esta tarefa.
 
-Tarefa: [DESCREVA O QUE QUER FAZER]
+Tarefa: [DESCREVA]
 
 Siga o Protocolo PEV:
-1. Apresente o PLAN com critérios verificáveis antes de qualquer código
-2. Execute dentro do plano aprovado
-3. Verifique cada critério antes de encerrar
-```
-
-### Instalar skills adicionais
-
-```bash
-npx harness-engineering skill --bundle essentials  # para todos os projetos
-npx harness-engineering skill --bundle saas        # produtos web
-npx harness-engineering skill --bundle api         # APIs e backends
-npx harness-engineering skill --bundle security    # segurança
-npx harness-engineering skill --bundle ai          # projetos com IA
-npx harness-engineering skill brainstorming        # skill específica
-npx harness-engineering skill --list               # ver todas
+1. PLAN — critérios verificáveis antes de qualquer código
+2. EXECUTE — dentro do plano aprovado, lendo arquivos incrementalmente
+3. VERIFY — máximo 3 linhas de resposta; use masking em outputs longos
 ```
 
 ---
 
-## Memória Persistente entre Sessões *(v1.1.0)*
+## Economia de Contexto *(v1.2.0 + v1.3.0)*
 
-O maior problema com agentes de IA é que **cada sessão começa do zero**.
-O harness resolve isso com dois comandos nativos do Claude Code:
+O harness implementa 5 técnicas que juntas cortam **50-70% do consumo de tokens**:
 
-### Encerrar sessão
+### 1. Lazy Loading de Directives *(v1.2.0)*
 
-```
-/wrap-session
-/wrap-session autenticacao-jwt
-```
-
-O agente resume automaticamente:
-- Decisões tomadas
-- Tarefas concluídas e pendentes
-- Aprendizados não óbvios
-- Aplicação da Regra de Hashimoto
-
-Tudo salvo em `.harness/memory/YYYY-MM-DD-[tema].md`
-
-### Iniciar próxima sessão
+O agente lê `.harness/index.md` (arquivo leve) e carrega **só** a directive relevante.
 
 ```
-/brief-session
+Antes:  todos os arquivos = 15k tokens
+Depois: index.md + 1 directive = 3k tokens
 ```
 
-O agente lê a última sessão salva e apresenta um briefing resumido
-antes de fazer qualquer coisa. Você retoma exatamente de onde parou.
+### 2. Progressive Disclosure *(v1.3.0)*
+
+Em vez de carregar arquivos inteiros, o agente lê só o necessário:
+
+```bash
+# Em vez de cat arquivo-inteiro.ts
+grep -n "função relevante" src/services/auth.ts
+head -50 src/services/auth.ts
+```
+
+### 3. Observation Masking *(v1.3.0)*
+
+Outputs longos (logs, testes, stack traces) são substituídos por placeholders:
+
+```
+[Logs omitidos — 847 linhas | Resultado: FALHA | Erro: timeout na linha 42]
+[Testes omitidos — 47 testes | Status: 46 PASS, 1 FALHA: 'valor em float']
+```
+
+**52% mais barato** que pedir ao modelo para sumarizar.
+
+### 4. Roteamento de Modelos *(v1.3.0)*
+
+| Tarefa | Modelo | Economia |
+|--------|--------|---------|
+| Docs, testes simples, formatação | Haiku / Mini | até 95% |
+| Código, implementação | Sonnet / padrão | até 80% |
+| Arquitetura, debugging difícil | Opus / Pro | — |
+
+**Claude Code:** `/model-select` antes de iniciar.
+**Outros runtimes:** consulte a tabela no `AGENTS.md`.
+
+### 5. Sub-agentes para Tarefas Pesadas *(v1.3.0)*
+
+Tarefas > 20k tokens são delegadas a sub-agentes isolados.
+Retornam apenas um resumo de 1.000-2.000 tokens para o agente principal.
+
+```
+Directive: directives/subagent-dispatch.md
+```
+
+### 6. Compressão de Histórico *(v1.2.0)*
+
+```bash
+python execution/compress-history.py --auto
+```
+
+**Claude Code:** `/context-check --compress`
+
+---
+
+## Memória Persistente *(v1.1.0)*
+
+**Claude Code:**
+```
+/wrap-session       ← encerra e salva
+/brief-session      ← retoma sessão anterior
+```
+
+**Outros runtimes:**
+```
+# Encerrar
+Leia directives/session-memory.md e salve o contexto em
+.harness/memory/last-session.md
+
+# Retomar
+Leia .harness/memory/last-session.md e me dê um briefing
+```
 
 ### Trocar de runtime sem perder contexto
 
-Quando trocar do Claude Code para o Antigravity (ou qualquer outro runtime):
-
-**1. Antes de sair — no Claude Code:**
-```
-/wrap-session
-```
-
-**2. No novo runtime — Antigravity, OpenCode, etc.:**
-```
-Leia o GEMINI.md e em seguida .harness/memory/last-session.md
-para entender o contexto e onde paramos.
-Apresente um briefing e aguarde minha instrução.
-```
-
-O `last-session.md` funciona como memória universal — qualquer runtime consegue ler.
+1. Salve com `/wrap-session` ou equivalente
+2. No novo runtime: `Leia .harness/memory/last-session.md e me dê um briefing`
 
 ---
 
-## Estrutura instalada
+## Estrutura
 
 ```
 seu-projeto/
 │
-├── AGENTS.md          ← núcleo do harness (lido por todos os runtimes)
-├── CLAUDE.md          ← espelho para Claude Code
-├── GEMINI.md          ← espelho para Antigravity
+├── AGENTS.md / CLAUDE.md / GEMINI.md
 │
-├── directives/        ← SOPs: define O QUE o agente deve fazer
-│   └── session-memory.md  ← ✨ novo: fluxo de memória entre sessões
+├── directives/
+│   ├── session-memory.md          ← v1.1.0
+│   ├── context-management.md      ← v1.2.0
+│   ├── subagent-dispatch.md       ← v1.3.0
+│   └── observation-masking.md     ← v1.3.0
 │
-├── execution/         ← scripts determinísticos
+├── execution/
+│   ├── SCRIPT-template.py
+│   └── compress-history.py        ← v1.2.0
 │
 ├── .harness/
-│   ├── domains/       ← regras por domínio
-│   ├── skills/        ← skills instaladas
-│   ├── doe/           ← templates de prompt
-│   ├── pev/           ← ciclo Plan · Execute · Verify
-│   ├── memory/        ← ✨ novo: histórico de sessões
-│   │   ├── INDEX.md
-│   │   └── last-session.md
-│   └── quality-gates/ ← hooks de verificação
+│   ├── index.md                   ← v1.2.0 (atualizado v1.3.0)
+│   ├── domains/
+│   ├── skills/
+│   ├── memory/                    ← v1.1.0
+│   └── quality-gates/
 │
-├── .claude/
-│   └── commands/
-│       ├── wrap-session.md   ← ✨ novo: /wrap-session
-│       ├── brief-session.md  ← ✨ novo: /brief-session
-│       ├── fetch-skills.md
-│       ├── harness-check.md
-│       └── create-directive.md
-│
-└── docs/
-    ├── architecture.md
-    ├── domain-rules.md
-    └── coding-standards.md
+└── .claude/commands/
+    ├── wrap-session.md             ← v1.1.0
+    ├── brief-session.md            ← v1.1.0
+    ├── context-check.md            ← v1.2.0
+    ├── model-select.md             ← v1.3.0
+    ├── fetch-skills.md
+    ├── harness-check.md
+    └── create-directive.md
 ```
 
 ---
 
 ## Quality Gate
-
-O pre-commit hook bloqueia automaticamente:
 
 | Verificação | O que bloqueia |
 |-------------|----------------|
@@ -211,36 +224,26 @@ O pre-commit hook bloqueia automaticamente:
 
 ## Regra de Hashimoto
 
-Quando o agente cometer um erro, não basta corrigir o código.
-Atualize o harness para que aquele erro nunca mais aconteça:
-
 1. Corrija o código
-2. Atualize a **directive** com o aprendizado
-3. Se verificável → atualize o **pre-commit hook**
-4. Se for regra de negócio → atualize o **arquivo de domínio**
+2. Atualize a directive com o aprendizado
+3. Se verificável → atualize o pre-commit hook
+4. Se regra de negócio → atualize o arquivo de domínio
 5. Commit: `harness(quality-gate): [descrição]`
 
-> Cada bug que não vira regra do harness é um bug que vai acontecer de novo.
+---
+
+## Compatibilidade
+
+| Runtime | Arquivo | Lazy Loading | Memória | Masking | Roteamento |
+|---------|---------|-------------|---------|---------|-----------|
+| Claude Code | `CLAUDE.md` | `index.md` | `/wrap-session` | automático | `/model-select` |
+| Antigravity | `GEMINI.md` | `index.md` | manual | manual | tabela AGENTS.md |
+| OpenCode | `AGENTS.md` | `index.md` | manual | manual | tabela AGENTS.md |
+| Cursor | `.cursorrules` | `index.md` | manual | manual | tabela AGENTS.md |
 
 ---
 
-## Compatibilidade de Runtimes
-
-| Runtime | Arquivo lido | Memória de sessão |
-|---------|-------------|------------------|
-| Claude Code | `CLAUDE.md` | `/wrap-session` + `/brief-session` |
-| Antigravity | `GEMINI.md` | leia `last-session.md` manualmente |
-| OpenCode | `AGENTS.md` | leia `last-session.md` manualmente |
-| Cursor | `.cursorrules` | leia `last-session.md` manualmente |
-
----
-
-## Integração com GSD (opcional)
-
-| Camada | Responsabilidade |
-|--------|-----------------|
-| **Harness** | Regras, domínios, directives, quality gates, memória |
-| **GSD** | Execução: planejamento, waves paralelas, commits atômicos |
+## Integração com GSD
 
 ```bash
 npx get-shit-done-cc@latest
@@ -250,33 +253,48 @@ npx get-shit-done-cc@latest
 
 ## Changelog
 
+### v1.3.0
+- ✨ Progressive Disclosure — leitura incremental de arquivos
+- ✨ Observation Masking — placeholders para outputs longos (52% mais barato)
+- ✨ Roteamento de Modelos — tabela Haiku/Sonnet/Opus por tipo de tarefa
+- ✨ Sub-agentes — critério e directive para delegar tarefas > 20k tokens
+- ✨ Comando `/model-select` para Claude Code
+- ✨ `directives/subagent-dispatch.md`
+- ✨ `directives/observation-masking.md`
+- 🔄 `.harness/index.md` atualizado com novas directives
+
+### v1.2.0
+- ✨ Lazy loading via `.harness/index.md`
+- ✨ Protocolo de output conciso
+- ✨ Budget por tipo de tarefa
+- ✨ `execution/compress-history.py`
+- ✨ `directives/context-management.md`
+- ✨ Comando `/context-check`
+
 ### v1.1.0
-- ✨ Memória persistente entre sessões (`.harness/memory/`)
-- ✨ Comando `/wrap-session` — encerra sessão e salva contexto
-- ✨ Comando `/brief-session` — retoma sessão anterior
-- ✨ Directive `session-memory.md` — SOP de continuidade
-- ✨ Suporte a troca de runtime sem perda de contexto
+- ✨ Memória persistente entre sessões
+- ✨ Comandos `/wrap-session` e `/brief-session`
+- ✨ `directives/session-memory.md`
 
 ### v1.0.0
-- Estrutura base: AGENTS.md · CLAUDE.md · GEMINI.md
-- Framework DOE · Ciclo PEV
-- 4 domínios: saas, api, automation, juridico-financeiro
-- Quality gate pre-commit · CI GitHub Actions
-- Scripts: init-project, health-check, fetch-skill, adopt-project
-- Instalador npm: `npx harness-engineering`
+- Estrutura base completa
+- Framework DOE · Ciclo PEV · 4 domínios
+- Quality gate · CI · `npx harness-engineering`
 
 ---
 
 ## Princípios
 
-1. **Agente = Modelo + Harness** — LLM sem harness é chatbot, não agente
-2. **Marcha dos Noves** — 90% por etapa × 10 etapas = 35% de sucesso
-3. **Directives são documentos vivos** — atualize sempre que aprender algo novo
+1. **Agente = Modelo + Harness**
+2. **Marcha dos Noves** — o harness resolve
+3. **Directives são documentos vivos**
 4. **Scripts determinísticos > agente improvisando**
-5. **Verificador com contexto limpo** — agente não audita o próprio trabalho
+5. **Verificador com contexto limpo**
 6. **Sucesso silencioso, falha barulhenta**
-7. **Hashimoto** — cada erro vira melhoria permanente no harness
-8. **Memória persistente** *(v1.1.0)* — cada sessão começa de onde a anterior parou
+7. **Hashimoto** — cada erro melhora o harness
+8. **Memória persistente** *(v1.1.0)*
+9. **Contexto mínimo necessário** *(v1.2.0)*
+10. **Modelo certo para cada tarefa** *(v1.3.0)*
 
 ---
 

@@ -1,76 +1,152 @@
-# AGENTS.md — Contrato Facil
+# AGENTS.md — Harness Universal
+<!-- Este arquivo é espelhado como CLAUDE.md e GEMINI.md para compatibilidade total -->
 <!-- Claude Code · Antigravity · OpenCode · Cursor · Copilot -->
 
-> Leia este arquivo completamente antes de qualquer ação.
-
-## Identidade
-
-Você é um agente de engenharia do projeto **Contrato Facil**.
-gerar contrato [D[D[D[D[D[D[D[D[D[D[D[D[D[D[Dum site que gera contratos
-
-Stack: confirme
-
-## Arquitetura de 3 Camadas
-
-- **Camada 1 — Directives** (`directives/`): SOPs — o QUE fazer
-- **Camada 2 — Agente (você)**: roteamento inteligente
-- **Camada 3 — Execution** (`execution/`): scripts determinísticos
-
-## Regras Absolutas
-
-1. Nunca avance sem validar o output da etapa anterior
-2. Nunca invente — marque `[VERIFICAR: motivo]`
-3. Nunca quebre a arquitetura de camadas de `docs/architecture.md`
-4. Verifique `execution/` antes de criar script novo
-5. Nunca use `any` em TypeScript nem ignore erros silenciosamente
-6. Aplique o Protocolo PEV em tarefas com 3+ arquivos
-7. Aplique a Regra de Hashimoto: cada erro melhora o harness
-
-## Protocolo PEV
-
-```
-PLAN    → critérios verificáveis antes de qualquer código
-EXECUTE → estritamente dentro do plano aprovado
-VERIFY  → falha = volta ao Plan com contexto de erro
-```
-
-## Domínios Ativos
-
-- [x] SaaS Web              → `.harness/domains/saas.md`
-- [x] API / Backend         → `.harness/domains/api.md`
-- [x] Automação / Scripts   → `.harness/domains/automation.md`
-- [x] Jurídico / Financeiro → `.harness/domains/juridico-financeiro.md`
-
-## Skills Instaladas
-
-> Instale novas: `bash scripts/fetch-skill.sh <nome>`
-
-- `.harness/skills/SKILL-template.md` → template para criar skills
-
-*Harness v1.0.0 — adotado em 2026-04-19*
-
-- `.harness/skills/brainstorming/SKILL.md` — brainstorming
-- `.harness/skills/architecture/SKILL.md` — architecture
-- `.harness/skills/frontend-design/SKILL.md` — frontend-design
-- `.harness/skills/api-design-principles/SKILL.md` — api-design-principles
-- `.harness/skills/test-driven-development/SKILL.md` — test-driven-development
-- `.harness/skills/security-auditor/SKILL.md` — security-auditor
-- `.harness/skills/create-pr/SKILL.md` — create-pr
-- `.harness/skills/brainstorming-session/SKILL.md` — brainstorming-session
+> Leia este arquivo **completamente** antes de qualquer ação.
+> Este é o núcleo do harness. Cada regra aqui é absoluta.
 
 ---
 
-## Memória de Sessão
+## Identidade
 
-**Ao iniciar qualquer sessão:**
-Verifique se `.harness/memory/last-session.md` existe.
-Se existir, leia antes de qualquer ação e apresente um briefing resumido.
+Você opera dentro de uma **arquitetura de 3 camadas** que separa responsabilidades
+para maximizar confiabilidade. LLMs são probabilísticos; a maior parte da lógica de
+negócio é determinística. Este sistema resolve esse descompasso.
 
-**Ao encerrar qualquer sessão:**
-Execute `/wrap-session` ou salve manualmente o contexto em
-`.harness/memory/last-session.md` seguindo o template da
-directive `directives/session-memory.md`.
+```
+┌─────────────────────────────────────────────┐
+│                  HARNESS                    │
+│  ┌───────────────────────────────────────┐  │
+│  │              AGENTE (você)            │  │
+│  │  ┌─────────────┐  ┌───────────────┐  │  │
+│  │  │   SKILLS    │  │   DIRECTIVES  │  │  │
+│  │  │ (como fazer)│  │ (o que fazer) │  │  │
+│  │  └─────────────┘  └───────────────┘  │  │
+│  │  ┌─────────────────────────────────┐  │  │
+│  │  │    EXECUTION (scripts det.)     │  │  │
+│  │  └─────────────────────────────────┘  │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+```
 
-**Ao trocar de runtime:**
-O `last-session.md` é o ponto de handoff universal —
-qualquer runtime consegue retomar o trabalho a partir dele.
+---
+
+## As 3 Camadas
+
+### Camada 1 — Directives (O que fazer)
+- SOPs escritos em Markdown que vivem em `directives/`
+- Definem objetivo, entradas, ferramentas a usar, saídas e edge cases
+- Instruções em linguagem natural, como você daria a um profissional sênior
+- **Você não modifica directives sem permissão explícita**
+
+### Camada 2 — Agente / Orquestração (Você)
+- Sua função: **roteamento inteligente**
+- Ler directives → chamar ferramentas na ordem correta → lidar com erros
+- Você **não tenta fazer tudo manualmente** — lê a directive, formula entradas/saídas,
+  chama o script correto em `execution/`
+- Você é a ponte entre intenção e execução
+
+### Camada 3 — Execution (Fazer o trabalho)
+- Scripts determinísticos em `execution/`
+- Confiáveis, testáveis, bem comentados
+- Variáveis de ambiente e tokens vivem no `.env`
+- **Prefira sempre scripts existentes** — verifique `execution/` antes de criar novos
+
+---
+
+## Regras Absolutas
+
+1. **Nunca avance** sem validar o output da etapa anterior
+2. **Nunca invente** — se não tiver certeza, marque `[VERIFICAR: motivo]`
+3. **Nunca quebre** a arquitetura de camadas de `/docs/architecture.md`
+4. **Nunca use** `any` em TypeScript nem ignore erros silenciosamente
+5. **Verifique `execution/` primeiro** — só crie script novo se não existir
+6. **Aplique o Protocolo PEV** em tarefas com 3+ arquivos envolvidos
+7. **Aplique a Regra de Hashimoto**: cada erro vira melhoria permanente no harness
+
+---
+
+## Protocolo PEV (obrigatório para tarefas complexas)
+
+```
+PLAN    → liste tarefas + critérios verificáveis antes de qualquer código
+EXECUTE → implemente estritamente dentro do plano aprovado
+VERIFY  → confirme cada critério; falha = volta ao Plan com contexto de erro
+```
+
+---
+
+## Loop de Self-Annealing (auto-fortalecimento)
+
+Quando algo quebrar:
+1. Leia o erro e stack trace completo
+2. Corrija o script/código
+3. Teste e confirme que funciona
+4. Atualize a directive com o aprendizado (limites de API, edge cases, etc.)
+5. Se for erro recorrente → atualize o harness (Regra de Hashimoto)
+
+> Erros são oportunidades de fortalecimento do sistema — nunca apenas corrija,
+> sempre pergunte: "onde o harness falhou em prevenir isso?"
+
+---
+
+## Formato de Output
+
+| Tipo    | Formato |
+|---------|---------|
+| Sucesso | Silencioso — apenas o resultado |
+| Falha   | `ERRO: [o que]` · `CAUSA: [por quê]` · `AÇÃO: [o que fazer]` |
+| Código  | Tipos explícitos, sem `any`, sem `console.log` em produção |
+| JSON    | Schema fixo conforme `/docs/domain-rules.md` |
+
+---
+
+## Organização de Arquivos
+
+```
+directives/          → SOPs em Markdown (o que fazer)
+execution/           → Scripts determinísticos (como executar)
+.harness/
+  doe/               → Templates de prompt por camada (D·O·E)
+  pev/               → Templates do ciclo Plan·Execute·Verify
+  domains/           → Regras por tipo de projeto (saas, api, etc.)
+  skills/            → Skills instaladas (locais + buscadas do repositório)
+  quality-gates/     → Hooks e verificações automáticas
+docs/
+  architecture.md    → Decisões arquiteturais (ADRs)
+  domain-rules.md    → Regras de negócio e schemas
+  coding-standards.md→ Padrões de código
+.tmp/                → Arquivos intermediários (sempre regeneráveis)
+```
+
+> **Deliverables** vivem na nuvem (Google Sheets, Drive, etc.)
+> **Intermediários** vivem em `.tmp/` — podem ser apagados a qualquer momento
+
+---
+
+## Domínios Ativos
+
+> Marque os domínios deste projeto. Leia os arquivos correspondentes antes de trabalhar.
+
+- [ ] SaaS Web              → `.harness/domains/saas.md`
+- [ ] API / Backend         → `.harness/domains/api.md`
+- [ ] Automação / Scripts   → `.harness/domains/automation.md`
+- [ ] Jurídico / Financeiro → `.harness/domains/juridico-financeiro.md`
+
+---
+
+## Skills Instaladas
+
+> Skills disponíveis para uso neste projeto.
+> Leia a skill relevante antes de executar a tarefa correspondente.
+
+<!-- Skills locais do projeto -->
+- `.harness/skills/SKILL-template.md` → template para criar novas skills
+
+<!-- Skills buscadas do repositório externo serão adicionadas aqui automaticamente -->
+<!-- Use: bash scripts/fetch-skill.sh <nome> -->
+
+---
+
+*Harness v1.0.0 — inicializado em [data]*
+*Documentação: `/docs/` · Suporte: `bash scripts/health-check.sh`*
