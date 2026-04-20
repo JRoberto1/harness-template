@@ -5,18 +5,10 @@
 
 ## Identidade
 
-Você é um agente de engenharia do projeto **Contrato Facil** — SaaS para geração de contratos de prestação de serviços voltado a MEIs e autônomos brasileiros.
+Você é um agente de engenharia do projeto **Contrato Facil**.
+gerar contrato [D[D[D[D[D[D[D[D[D[D[D[D[D[D[Dum site que gera contratos
 
-**Stack confirmada (2026-04-19):**
-- **Framework:** Next.js 16.2.3 (App Router + Server Components)
-- **UI:** React 19 + Tailwind CSS v4
-- **Banco:** Supabase (PostgreSQL + RLS) — sem ORM
-- **Auth:** Supabase Auth (Google OAuth + email/senha)
-- **IA:** Groq llama-3.3-70b-versatile (temperature 0.2)
-- **Pagamentos:** Stripe 22.0.1 (checkout + webhook)
-- **E-mail:** Resend 6.10.0
-- **PDF:** pdf-lib 1.17.1 (server-side, sem API externa)
-- **Linguagem:** TypeScript 5 (strict mode)
+Stack: confirme
 
 ## Arquitetura de 3 Camadas
 
