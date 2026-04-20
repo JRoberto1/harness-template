@@ -1,6 +1,6 @@
 # AGENTS.md — Harness Universal
 <!-- Claude Code · Antigravity · OpenCode · Cursor · Copilot -->
-<!-- Versão: 1.2.0 -->
+<!-- Versão: 1.3.0 -->
 
 > Leia este arquivo completamente antes de qualquer ação.
 
@@ -37,66 +37,116 @@ VERIFY  → falha = volta ao Plan com contexto de erro
 
 ---
 
-## ⚡ Protocolo de Economia de Contexto *(v1.2.0)*
+## ⚡ Protocolo de Economia de Contexto *(v1.2.0+)*
 
-> Estas regras se aplicam a TODOS os runtimes.
-> Objetivo: cortar 35-50% de tokens sem perder qualidade.
+### Lazy Loading de Directives
 
-### Carregamento de Directives (Lazy Loading)
-
-**NUNCA** carregue todas as directives automaticamente.
-Siga este fluxo obrigatório:
+**NUNCA** carregue todas as directives automaticamente. Siga:
 
 ```
 1. Leia .harness/index.md (leve — 1-2 linhas por directive)
-2. Identifique qual directive tem match com a tarefa atual
+2. Identifique qual directive tem match com a tarefa
 3. Carregue APENAS a directive com match explícito
 4. Se nenhuma fizer match → execute sem directive específica
 ```
 
-Exemplo:
-- Tarefa "gerar PDF de contrato" → carrega `directives/gerar-contrato-pdf.md`
-- Tarefa "formatar botão" → NÃO carrega `directives/juridico-financeiro.md`
+### Progressive Disclosure — Leitura Incremental *(v1.3.0)*
+
+**NUNCA** carregue arquivos inteiros quando só precisa de uma parte.
+Use sempre a abordagem mínima necessária:
+
+```bash
+# ❌ Não faça — carrega tudo
+cat src/services/contrato-service.ts
+
+# ✅ Faça — lê só o necessário
+grep -n "gerarPDF" src/services/contrato-service.ts
+head -50 src/services/contrato-service.ts
+grep -rn "função que preciso" src/
+```
+
+Regra: leia o mínimo necessário para executar a tarefa.
+Se precisar de mais → leia incrementalmente.
+
+### Observation Masking *(v1.3.0)*
+
+Quando um output de ferramenta, log ou erro for longo (mais de 20 linhas),
+**substitua pelo placeholder** em vez de incluir tudo no contexto:
+
+```
+[Output omitido — Resultado: FALHA | Causa: timeout na linha 42]
+[Logs omitidos — 847 linhas | Resumo: 3 erros de tipagem em auth.ts]
+[Teste omitido — Status: PASS | 47/47 testes passando]
+```
+
+Formato do placeholder:
+```
+[TIPO omitido — Resultado: STATUS | Detalhe relevante em 1 linha]
+```
+
+Isso é **52% mais barato** que pedir ao modelo para sumarizar o conteúdo.
+
+### Roteamento de Modelos *(v1.3.0)*
+
+Escolha o modelo antes de iniciar baseado no tipo de tarefa:
+
+| Tipo de Tarefa | Modelo | Motivo |
+|---------------|--------|--------|
+| Arquitetura, decisões complexas, debugging difícil | **Opus / Pro** | precisa de raciocínio profundo |
+| Geração de código, implementação, refatoração | **Sonnet / padrão** | equilíbrio custo/qualidade |
+| Resumos, docs, formatação, testes simples | **Haiku / Mini** | tarefa mecânica, modelo caro é desperdício |
+| Debug rápido, perguntas pontuais | **Sonnet / padrão** | suficiente para a maioria |
+
+> No Claude Code: troque o modelo no seletor antes de iniciar.
+> No Antigravity: use o modelo correspondente na configuração.
+> Regra de bolso: se não tem certeza, use Sonnet. Suba para Opus só se travar.
+
+### Uso de Sub-agentes *(v1.3.0)*
+
+Dispare um sub-agente quando:
+- Tarefa consome mais de **20k tokens estimados**
+- Tarefa envolve auditar uma biblioteca ou repositório externo
+- Tarefa é independente do contexto atual (não precisa do histórico)
+
+O sub-agente processa em sua própria janela e retorna apenas
+um resumo de **1.000-2.000 tokens** para o agente principal.
+
+```
+Directive de referência: directives/subagent-dispatch.md
+```
 
 ### Regras de Output
 
 | Situação | Formato obrigatório |
 |----------|-------------------|
 | Sucesso | Máximo 3 linhas — apenas o resultado |
-| Falha | `ERRO:` / `CAUSA:` / `AÇÃO:` — sem texto adicional |
+| Falha | `ERRO:` / `CAUSA:` / `AÇÃO:` |
 | Progresso | Uma linha por etapa concluída |
 | Confirmação | "✓ feito" — sem repetir o que foi pedido |
+| Output longo | Use Observation Masking |
 
-**NUNCA faça:**
+**NUNCA:**
 - Explicar o que vai fazer antes de fazer
-- Repetir conteúdo que já está no contexto
-- Resumir o que acabou de executar em parágrafos longos
-- Reler arquivos já processados no mesmo turno
+- Repetir conteúdo já presente no contexto
+- Carregar arquivos inteiros quando só precisa de um trecho
+- Incluir logs ou outputs longos sem mascarar
 
 ### Compressão de Histórico
 
-Após **8 turnos** de conversa, execute automaticamente:
-
+Após **8 turnos**, execute:
+```bash
+python execution/compress-history.py --auto
 ```
-python execution/compress-history.py
-```
-
-Ou, se não tiver Python disponível, aplique manualmente:
-- Mantenha: decisões tomadas, estado atual, erros relevantes
-- Descarte: raciocínio intermediário, confirmações, verbose output
-- Salve o resumo em `.harness/memory/last-session.md`
 
 ### Budget por Tipo de Tarefa
 
-Consulte antes de executar. Se a tarefa estourar o budget → avise antes de começar.
-
-| Tipo de Tarefa | Max Contexto | Max Output |
-|---------------|-------------|-----------|
-| Análise simples | 8k tokens | 1k tokens |
-| Geração de código | 20k tokens | 4k tokens |
-| Revisão de documento | 30k tokens | 6k tokens |
-| Debug complexo | 40k tokens | 8k tokens |
-| Sessão completa | 60k tokens | — |
+| Tipo | Max Contexto | Max Output | Modelo |
+|------|-------------|-----------|--------|
+| Análise simples | 8k | 1k | Haiku |
+| Geração de código | 20k | 4k | Sonnet |
+| Revisão de documento | 30k | 6k | Sonnet |
+| Debug complexo | 40k | 8k | Opus |
+| Arquitetura | 50k | 10k | Opus |
 
 ---
 
@@ -104,7 +154,7 @@ Consulte antes de executar. Se a tarefa estourar o budget → avise antes de com
 
 **Ao iniciar:** leia `.harness/memory/last-session.md` se existir.
 **Ao encerrar:** salve contexto em `.harness/memory/last-session.md`.
-**Claude Code:** use `/wrap-session` e `/brief-session`.
+**Claude Code:** `/wrap-session` e `/brief-session`.
 **Outros runtimes:** leia `directives/session-memory.md`.
 
 ---
@@ -122,8 +172,8 @@ Consulte antes de executar. Se a tarefa estourar o budget → avise antes de com
 
 > Instale novas: `npx harness-engineering skill <nome>`
 
-- `.harness/skills/SKILL-template.md` → template para criar skills
+- `.harness/skills/SKILL-template.md` → template
 
 ---
 
-*Harness v1.2.0*
+*Harness v1.3.0*
