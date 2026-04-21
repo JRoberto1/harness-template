@@ -1,12 +1,11 @@
 #!/bin/bash
 # ============================================================
-# Harness Quality Gate — Pre-commit Hook
-# Instalação: cp .harness/quality-gates/pre-commit .git/hooks/pre-commit
-#             chmod +x .git/hooks/pre-commit
+# Bifrost Quality Gate — Pre-commit Hook v1.4.0
+# Lê .harness/config.json para protected_paths
 # ============================================================
 set -e
 
-RED='\033[0;31m'; YELLOW='\033[1;33m'; GREEN='\033[0;32m'; NC='\033[0m'; BOLD='\033[1m'
+RED='\033[0;31m'; YELLOW='\033[1;33m'; GREEN='\033[0;32m'; BOLD='\033[1m'; NC='\033[0m'
 ERRORS=0; WARNINGS=0
 
 fail() { echo -e "${RED}❌ ERRO: $1${NC}"; echo -e "   AÇÃO: $2"; [ -n "$3" ] && echo -e "   REF: $3"; ERRORS=$((ERRORS+1)); }
@@ -16,32 +15,62 @@ pass() { echo -e "${GREEN}✓ $1${NC}"; }
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 [ -z "$STAGED" ] && exit 0
 
-echo -e "${BOLD}🔒 Harness Quality Gate${NC}"
+echo -e "${BOLD}🌉 Bifrost Quality Gate v1.4.0${NC}"
 echo "================================"
 
-# 1. Segredos
-echo ""; echo "[ 1/6 ] Segredos..."
+# 1. Protected paths (do .harness/config.json)
+echo ""; echo "[ 1/7 ] Protected paths..."
+if [ -f ".harness/config.json" ] && command -v node &>/dev/null; then
+  PROTECTED=$(node -e "
+    try {
+      const c = require('./.harness/config.json');
+      (c.protected_paths || []).forEach(p => console.log(p));
+    } catch(e) {}
+  " 2>/dev/null)
+
+  PROTECTED_VIOLATED=""
+  while IFS= read -r pattern; do
+    [ -z "$pattern" ] && continue
+    # Remove trailing slash para comparação
+    clean="${pattern%/}"
+    MATCH=$(echo "$STAGED" | grep -E "^${clean}" || true)
+    [ -n "$MATCH" ] && PROTECTED_VIOLATED+="$MATCH\n"
+  done <<< "$PROTECTED"
+
+  if [ -n "$PROTECTED_VIOLATED" ]; then
+    fail "Arquivo protegido sendo commitado" \
+         "Remova do staging: git reset HEAD <arquivo>" \
+         ".harness/config.json#protected_paths"
+  else
+    pass "Protected paths respeitados"
+  fi
+else
+  pass "config.json não encontrado — verificação pulada"
+fi
+
+# 2. Segredos
+echo ""; echo "[ 2/7 ] Segredos..."
 SECRET_FOUND=$(echo "$STAGED" | xargs -I{} git show ":{}" 2>/dev/null | \
   grep -iE "(password|api_key|secret|token)\s*[:=]\s*['\"][^'\"]{8,}|sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}" | \
   grep -v "harness-ignore" || true)
-[ -n "$SECRET_FOUND" ] && fail "Possível credencial no código" "Mova para .env" "AGENTS.md#regras-absolutas" || pass "Sem segredos"
+[ -n "$SECRET_FOUND" ] && fail "Possível credencial no código" "Mova para .env" "AGENTS.md" || pass "Sem segredos"
 
-# 2. console.log
-echo ""; echo "[ 2/6 ] console.log..."
+# 3. console.log
+echo ""; echo "[ 3/7 ] console.log..."
 JS=$(echo "$STAGED" | grep -E '\.(js|ts|jsx|tsx)$' || true)
-CLOG_FOUND=""
-[ -n "$JS" ] && CLOG_FOUND=$(echo "$JS" | xargs -I{} git show ":{}" 2>/dev/null | grep -n "console\.log" | grep -v "harness-ignore" || true)
-[ -n "$CLOG_FOUND" ] && warn "console.log encontrado" "Use o logger do projeto ou adicione '// harness-ignore'" || pass "Sem console.log"
+CLOG=""
+[ -n "$JS" ] && CLOG=$(echo "$JS" | xargs -I{} git show ":{}" 2>/dev/null | grep -n "console\.log" | grep -v "harness-ignore" || true)
+[ -n "$CLOG" ] && warn "console.log detectado" "Use o logger do projeto ou '// harness-ignore'" || pass "Sem console.log"
 
-# 3. TypeScript any
-echo ""; echo "[ 3/6 ] TypeScript any..."
+# 4. TypeScript any
+echo ""; echo "[ 4/7 ] TypeScript any..."
 TS=$(echo "$STAGED" | grep -E '\.(ts|tsx)$' || true)
-ANY_FOUND=""
-[ -n "$TS" ] && ANY_FOUND=$(echo "$TS" | xargs -I{} git show ":{}" 2>/dev/null | grep -n ": any" | grep -v "harness-ignore" || true)
-[ -n "$ANY_FOUND" ] && fail "Uso de 'any' em TypeScript" "Defina o tipo explícito" ".harness/domains/api.md" || pass "Sem 'any'"
+ANY=""
+[ -n "$TS" ] && ANY=$(echo "$TS" | xargs -I{} git show ":{}" 2>/dev/null | grep -n ": any" | grep -v "harness-ignore" || true)
+[ -n "$ANY" ] && fail "Uso de 'any' em TypeScript" "Defina o tipo explícito" ".harness/domains/api.md" || pass "Sem 'any'"
 
-# 4. Valores financeiros em float
-echo ""; echo "[ 4/6 ] Valores financeiros..."
+# 5. Valores financeiros em float
+echo ""; echo "[ 5/7 ] Valores financeiros..."
 if [ -f ".harness/domains/juridico-financeiro.md" ]; then
   FLOAT=$(echo "$STAGED" | xargs -I{} git show ":{}" 2>/dev/null | \
     grep -iE "(preco|valor|amount|price|total)\s*[:=]\s*[0-9]+\.[0-9]+" | grep -v "harness-ignore" || true)
@@ -50,17 +79,26 @@ else
   pass "Domínio financeiro inativo — pulado"
 fi
 
-# 5. Directives atualizadas
-echo ""; echo "[ 5/6 ] Directives..."
+# 6. Directives atualizadas
+echo ""; echo "[ 6/7 ] Directives..."
 CODE=$(echo "$STAGED" | grep -E '\.(ts|js|py)$' || true)
 DIRECTIVE=$(echo "$STAGED" | grep "^directives/" || true)
 [ -n "$CODE" ] && [ -z "$DIRECTIVE" ] && \
-  warn "Código modificado sem atualizar directive" "Verifique se directives/ precisa de atualização com os aprendizados" || pass "Directives verificadas"
+  warn "Código modificado sem atualizar directive" "Verifique se directives/ precisa de atualização" || pass "Directives verificadas"
 
-# 6. .env
-echo ""; echo "[ 6/6 ] Arquivos .env..."
+# 7. .env
+echo ""; echo "[ 7/7 ] Arquivos .env..."
 ENV=$(echo "$STAGED" | grep -E "^\.env" | grep -v "\.example$" || true)
-[ -n "$ENV" ] && fail "Arquivo .env sendo commitado: $ENV" "Adicione ao .gitignore. Use .env.example para documentar" || pass "Sem .env"
+[ -n "$ENV" ] && fail ".env sendo commitado" "Adicione ao .gitignore. Use .env.example para documentar" || pass "Sem .env"
+
+# Sincronizar espelhos automaticamente
+if echo "$STAGED" | grep -q "^AGENTS.md$"; then
+  echo ""
+  echo -e "${YELLOW}→${NC} AGENTS.md modificado — sincronizando espelhos..."
+  cp AGENTS.md CLAUDE.md 2>/dev/null && echo -e "  ${GREEN}✓${NC} CLAUDE.md"
+  cp AGENTS.md GEMINI.md 2>/dev/null && echo -e "  ${GREEN}✓${NC} GEMINI.md"
+  git add CLAUDE.md GEMINI.md 2>/dev/null || true
+fi
 
 # Resultado
 echo ""; echo "================================"
