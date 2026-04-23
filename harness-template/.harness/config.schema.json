@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Bifrost Harness Configuration",
+  "description": "Configuração do harness Bifrost v2.0.0",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Versão do harness",
+      "default": "2.0.0"
+    },
+    "protected_paths": {
+      "type": "array",
+      "description": "Paths que o agente NUNCA pode modificar",
+      "items": { "type": "string" },
+      "default": [".env", ".env.*", "secrets/", "credentials/", "terraform/", "infra/"]
+    },
+    "allowed_paths": {
+      "type": "array",
+      "description": "Paths que o agente pode modificar",
+      "items": { "type": "string" },
+      "default": ["src/", "app/", "components/", "lib/", "directives/", "docs/", "AGENTS.md"]
+    },
+    "tech_choice_mode": {
+      "type": "string",
+      "enum": ["auto", "ask", "fixed"],
+      "description": "Como lidar com escolhas tecnológicas",
+      "default": "ask"
+    },
+    "session": {
+      "type": "object",
+      "properties": {
+        "auto_wrap_on_stop": {
+          "type": "boolean",
+          "description": "Executar wrap-session automaticamente ao encerrar",
+          "default": true
+        },
+        "compress_after_turns": {
+          "type": "integer",
+          "description": "Número de turnos antes de sugerir compressão",
+          "default": 8
+        },
+        "memory_path": {
+          "type": "string",
+          "description": "Pasta onde sessões são salvas",
+          "default": ".harness/memory"
+        }
+      }
+    },
+    "quality_gate": {
+      "type": "object",
+      "properties": {
+        "block_secrets": { "type": "boolean", "default": true },
+        "block_console_log": { "type": "boolean", "default": true },
+        "block_typescript_any": { "type": "boolean", "default": true },
+        "block_float_monetary": { "type": "boolean", "default": false },
+        "block_env_commit": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "./.harness/config.schema.json",
+  "version": "2.0.0",
+  "protected_paths": [
+    ".env", ".env.*", "secrets/", "credentials/",
+    "terraform/", "infra/", "k8s/", "*.pem", "*.key"
+  ],
+  "allowed_paths": [
+    "src/", "app/", "components/", "lib/", "pages/",
+    "directives/", "execution/", "docs/", "agents/",
+    "AGENTS.md", "CLAUDE.md", "GEMINI.md"
+  ],
+  "tech_choice_mode": "ask",
+  "session": {
+    "auto_wrap_on_stop": true,
+    "compress_after_turns": 8,
+    "memory_path": ".harness/memory"
+  },
+  "quality_gate": {
+    "block_secrets": true,
+    "block_console_log": true,
+    "block_typescript_any": true,
+    "block_float_monetary": false,
+    "block_env_commit": true
+  }
+}
