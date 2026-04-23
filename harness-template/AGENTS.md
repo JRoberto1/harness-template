@@ -199,6 +199,42 @@ Ou Claude Code: `/context-check --compress`
 
 ---
 
+## Princípios Karpathy — Como Pensar Antes de Agir
+
+> Derivados das observações de Andrej Karpathy (ex-OpenAI/Tesla)
+> sobre como LLMs falham na prática. Não-negociáveis.
+
+**1. Declare suposições antes de agir**
+Se houver múltiplas interpretações, apresente todas e pergunte.
+Nunca escolha silenciosamente. Se algo não estiver claro → pare, nomeie a confusão, pergunte.
+
+**2. Código mínimo — nada especulativo**
+- Sem features além do que foi pedido
+- Sem abstrações para código de uso único
+- Sem "flexibilidade" que não foi solicitada
+- Se escreveu 200 linhas e poderiam ser 50 → reescreva
+
+*Pergunta interna: "Um engenheiro sênior diria que isso está complicado demais?" Se sim, simplifique.*
+
+**3. Mudanças cirúrgicas — toque só o que deve**
+- Não "melhore" código adjacente que não foi pedido
+- Não refatore o que não está quebrado
+- Não apague código que não foi você quem tornou obsoleto
+- Cada linha mudada deve ter rastreabilidade direta ao pedido
+
+**4. Transforme tarefas em critérios verificáveis**
+```
+❌ "Corrija o bug"         →  ✅ "Escreva teste que reproduz, faça passar"
+❌ "Adicione validação"    →  ✅ "Escreva testes para inputs inválidos, faça passar"
+❌ "Refatore X"            →  ✅ "Testes passam antes e depois — sem mudança de comportamento"
+```
+
+**O harness está funcionando se:** menos mudanças desnecessárias nos diffs,
+menos reescritas por complicação excessiva, perguntas de clareza vêm
+*antes* da implementação — não depois dos erros.
+
+---
+
 ## Evolução do Harness
 
 Quando encontrar um erro → aplique Hashimoto:
