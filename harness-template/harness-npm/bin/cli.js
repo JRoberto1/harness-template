@@ -372,6 +372,7 @@ const[,,cmd,...rest]=process.argv;
 switch(cmd){
   case"skill":   cmdSkill(rest);break;
   case"check":   cmdCheck();break;
+  case"stats":   require("./stats.js").printStats();break;
   case"--version":case"-v": console.log(`bifrost-harness v${VERSION}`);break;
   case"--help":case"-h":
     console.log(`\n${c.bold}🌉 Bifrost Harness Engineering v${VERSION}${c.reset}\n\nnpx harness-engineering              Instala o Bifrost\nnpx harness-engineering skill <nome> Instala uma skill\nnpx harness-engineering skill --bundle <bundle>\nnpx harness-engineering skill --list  Lista disponíveis\nnpx harness-engineering check         Verifica integridade\n\n${c.bold}Bundles:${c.reset} essentials · saas · api · security · automation · ai · sdlc\n`);break;
