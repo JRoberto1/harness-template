@@ -182,3 +182,90 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def create_pr(findings: list, suggestions: str, branch: str = "") -> dict:
+    """Cria branch + commit + abre PR via GitHub CLI."""
+    import subprocess, shutil
+    from datetime import datetime, timezone
+
+    if not shutil.which("gh"):
+        return {"status": "skip", "motivo": "GitHub CLI (gh) não instalado — instale em: https://cli.github.com"}
+
+    date   = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+    branch = branch or f"harness/auto-correction-{date}"
+    cats   = "-".join(sorted(set(f["categoria"] for f in findings)))
+    title  = f"harness(auto): correções detectadas — {cats}"
+    body   = "## Auto-correção Bifrost (Hashimoto Automático)\n\nPadrões detectados:\n"
+    for f in findings:
+        body += f"\n- **{f['categoria']}**: {f['sugestao']}"
+    body += f"\n\n```\n{suggestions.strip()}\n```"
+    body += "\n\n_Gerado por `execution/self-correction.py` — revise e aprove se correto._"
+
+    try:
+        subprocess.run(["git", "checkout", "-b", branch], check=True, capture_output=True)
+        subprocess.run(["git", "add", "directives/harness-evolution.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", title], check=True, capture_output=True)
+        subprocess.run(["git", "push", "-u", "origin", branch], check=True, capture_output=True)
+        r = subprocess.run(
+            ["gh", "pr", "create", "--title", title, "--body", body, "--head", branch],
+            check=True, capture_output=True, text=True
+        )
+        return {"status": "success", "pr_url": r.stdout.strip(), "branch": branch}
+    except subprocess.CalledProcessError as e:
+        return {"status": "error", "erro": e.stderr.decode() if e.stderr else str(e)}
+
+
+def main_v2():
+    """Entry point v2.3.0 com --open-pr."""
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--auto",    action="store_true")
+    p.add_argument("--input",   help="Arquivo de sessão")
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--open-pr", action="store_true", help="Abre PR automático (requer gh CLI)")
+    args = p.parse_args()
+
+    source = args.input or (LAST_SESSION if args.auto else None)
+    if not source or not Path(source).exists():
+        print(json.dumps({"status": "skip", "motivo": "Nenhuma sessão para analisar"}))
+        sys.exit(0)
+
+    content  = Path(source).read_text(encoding="utf-8")
+    findings = analyze(content)
+
+    if not findings:
+        print(json.dumps({"status": "clean", "motivo": "Sessão limpa — nenhum padrão de erro"}))
+        sys.exit(0)
+
+    existing    = read_evolution()
+    suggestions = render_suggestions(findings, existing)
+
+    if not suggestions:
+        print(json.dumps({"status": "skip", "motivo": "Todas as sugestões já existem"}))
+        sys.exit(0)
+
+    if args.dry_run:
+        print(suggestions)
+        sys.exit(0)
+
+    evolution_path = Path(EVOLUTION_MD)
+    if evolution_path.exists():
+        original = evolution_path.read_text(encoding="utf-8")
+        evolution_path.write_text(original.rstrip() + "\n" + suggestions + "\n", encoding="utf-8")
+    else:
+        print(json.dumps({"status": "error", "erro": f"{EVOLUTION_MD} não encontrado"}))
+        sys.exit(1)
+
+    output = {
+        "status": "success",
+        "arquivo": EVOLUTION_MD,
+        "padroes": [f["categoria"] for f in findings],
+        "linhas": suggestions.count("\n- "),
+    }
+
+    if args.open_pr:
+        pr_result = create_pr(findings, suggestions)
+        output["pr"] = pr_result
+
+    print(json.dumps(output, ensure_ascii=False))
+
