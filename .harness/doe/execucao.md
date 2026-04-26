@@ -1,59 +1,49 @@
-# E — Execução (Prompt dos Subagentes)
+# DOE — Execução
+# Camada 2→3: Como o Agente Chama Scripts Determinísticos
 
-> Cada subagente tem **uma única responsabilidade**.
-> Não conhece o objetivo global — apenas sua tarefa.
-> Isolamento de contexto: reduz drasticamente a taxa de erro.
+## Princípio
 
----
+> Scripts determinísticos > agente improvisando.
+> Se existe um script para a tarefa, use o script.
 
-## Template do Prompt de Subagente
+## Scripts Disponíveis
 
-```
-DIRETRIZES: [Cole as Diretrizes aqui]
+| Script | Uso | Quando |
+|--------|-----|--------|
+| `execution/compress-history.py` | Comprime histórico | Após 8 turnos |
+| `execution/validate_action.py` | Valida ação crítica | Antes de escrever/deletar/executar |
+| `execution/handoff.py` | Gera handoff JSON | Ao encerrar feature longa |
+| `execution/self-correction.py` | Hashimoto automático | Após erro na sessão |
+| `execution/stats.js` | Métricas de sessões | `npx harness-engineering stats` |
 
-PAPEL: Você é o subagente de [FUNÇÃO].
-Você não conhece o objetivo global — apenas sua tarefa.
+## Fluxo de Validação Antes de Agir
 
-DIRECTIVE DE REFERÊNCIA: directives/[nome].md
-  → Leia antes de executar se ainda não leu nesta sessão.
+```bash
+# Antes de qualquer ação crítica
+python execution/validate_action.py --action [tipo] --target [arquivo]
 
-INPUT RECEBIDO:
-{{input_do_orquestrador}}
-
-TAREFA EXATA:
-{{tarefa}}
-
-SCRIPT A USAR (se aplicável):
-  python execution/{{script}}.py --input "{{parametros}}"
-
-OUTPUT OBRIGATÓRIO (apenas este JSON):
-{
-  "status": "success" | "error" | "needs_review",
-  "resultado": {},
-  "arquivos_modificados": [],
-  "erros": [],
-  "nota_proximo_agente": "string ou null"
-}
-
-PROIBIDO:
-- Executar qualquer coisa fora do escopo acima
-- Retornar texto fora do schema JSON
-- Assumir informações não fornecidas no input
-- Avançar se houver erro não resolvido
+# Resultados possíveis:
+# {"status": "VALID"}          → pode executar
+# {"status": "NEEDS_APPROVAL"} → pergunte ao usuário
+# {"status": "INVALID"}        → nunca execute
 ```
 
----
+## Template de Chamada de Script
 
-## Mensagem de Erro para Autocorreção
+```bash
+# 1. Sempre dry-run primeiro
+python execution/[script].py --dry-run --input "[valor]"
 
+# 2. Após validar, execute
+python execution/[script].py --input "[valor]"
+
+# 3. Verifique saída JSON
+# {"status": "success"} → ok
+# {"status": "error"}   → reporte ERRO/CAUSA/AÇÃO
 ```
-ERRO DE EXECUÇÃO — Subagente: [nome]
-ERRO: [o que falhou]
-CAUSA PROVÁVEL: [diagnóstico]
-AÇÃO: [instrução específica de correção]
-SCRIPT: [comando exato para tentar novamente]
-REF: directives/[nome].md
-```
 
-> Mensagem genérica → agente trava.
-> Mensagem com AÇÃO → agente se autocorrige sem intervenção humana.
+## Criar Novo Script
+
+1. Verifique se já existe em `execution/`
+2. Use `execution/SCRIPT-template.py` como base
+3. Obrigatório: `--dry-run`, output JSON, tratamento de erro

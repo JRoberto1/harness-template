@@ -1,54 +1,52 @@
-# O — Orquestração (Prompt do Planejador)
+# DOE — Orquestração
+# Camada 2: Como o Agente Planeja e Delega
 
-> O orquestrador decompõe objetivos em planos. **Nunca executa diretamente.**
-
----
-
-## Template do Prompt
+## Padrão de Orquestração
 
 ```
-CONTEXTO: [Cole as Diretrizes aqui]
-
-DIRECTIVES DISPONÍVEIS:
-{{#each directives}}
-- {{nome}}: {{objetivo}}
-{{/each}}
-
-SCRIPTS DISPONÍVEIS:
-{{#each scripts}}
-- execution/{{arquivo}}: {{descricao}}
-{{/each}}
-
-OBJETIVO: {{objetivo_do_usuario}}
-
-TAREFA:
-1. Identifique qual directive se aplica (ou se é tarefa nova)
-2. Decomponha em etapas atômicas com critério verificável cada
-3. Retorne APENAS o JSON abaixo:
-
-{
-  "plano_id": "uuid",
-  "objetivo": "string",
-  "directive_usada": "nome ou null",
-  "etapas": [
-    {
-      "ordem": 1,
-      "descricao": "string",
-      "script": "execution/arquivo.py ou null",
-      "input": "o que passar",
-      "output_esperado": "o que deve retornar",
-      "criterio_avanco": "como verificar conclusão",
-      "dependencias": []
-    }
-  ],
-  "criterio_sucesso_global": "string"
-}
+ENTRADA: tarefa do usuário
+      ↓
+INTENT GATE: pesquisa / implementação / investigação / correção / revisão
+      ↓
+INDEX: leia .harness/index.md → identifique directive com match
+      ↓
+DIRECTIVE: carregue apenas a directive relevante
+      ↓
+PLAN: decomponha em tarefas com critérios verificáveis
+      ↓
+EXECUTE: use scripts de execution/ quando disponível
+      ↓
+VERIFY: valide cada critério antes de reportar
+      ↓
+SAÍDA: máximo 3 linhas de sucesso ou ERRO/CAUSA/AÇÃO
 ```
 
----
+## Decisão: Agente vs Script
 
-## Regra Crítica
+| Tarefa | Quem executa |
+|--------|-------------|
+| Compressão de histórico | `execution/compress-history.py` |
+| Validação de ação crítica | `execution/validate_action.py` |
+| Handoff estruturado | `execution/handoff.py` |
+| Auto-correção Hashimoto | `execution/self-correction.py` |
+| Raciocínio e decisão | Agente (Camada 2) |
+| Classificação de intenção | Agente (Camada 2) |
 
-> O orquestrador **nunca executa tarefas diretamente.**
-> Se precisar analisar algo para planejar → spawna subagente de análise.
-> Cada vez que assume execução, o risco de degradação aumenta.
+## Sub-agentes
+
+Quando delegar:
+- Tarefa > 20k tokens estimados
+- Tarefa independente do contexto atual
+
+Template em `directives/subagent-dispatch.md`.
+
+## Prompt do Planejador
+
+```
+Tarefa: [descrição]
+
+Decomponha em:
+| # | Tarefa | Arquivo | Critério Verificável | Depende de |
+
+Apresente o plano. Aguarde aprovação antes de executar.
+```
