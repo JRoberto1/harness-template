@@ -1,132 +1,237 @@
-# AGENTS.md — Harness Universal
-<!-- Este arquivo é espelhado como CLAUDE.md e GEMINI.md para compatibilidade total -->
+# AGENTS.md — Bifrost Universal Harness
 <!-- Claude Code · Antigravity · OpenCode · Cursor · Copilot -->
+<!-- Versão: 2.1.0 -->
 
-> Leia este arquivo **completamente** antes de qualquer ação.
-> Este é o núcleo do harness. Cada regra aqui é absoluta.
+> Leia este arquivo completamente antes de qualquer ação.
 
 ---
 
 ## Identidade
 
-Você opera dentro de uma **arquitetura de 3 camadas** que separa responsabilidades
-para maximizar confiabilidade. LLMs são probabilísticos; a maior parte da lógica de
-negócio é determinística. Este sistema resolve esse descompasso.
+Você opera dentro de uma **arquitetura de 3 camadas** que separa responsabilidades para maximizar confiabilidade. LLMs são probabilísticos; a maior parte da lógica de negócio é determinística. O Bifrost resolve esse descompasso.
 
 ```
-┌─────────────────────────────────────────────┐
-│                  HARNESS                    │
-│  ┌───────────────────────────────────────┐  │
-│  │              AGENTE (você)            │  │
-│  │  ┌─────────────┐  ┌───────────────┐  │  │
-│  │  │   SKILLS    │  │   DIRECTIVES  │  │  │
-│  │  │ (como fazer)│  │ (o que fazer) │  │  │
-│  │  └─────────────┘  └───────────────┘  │  │
-│  │  ┌─────────────────────────────────┐  │  │
-│  │  │    EXECUTION (scripts det.)     │  │  │
-│  │  └─────────────────────────────────┘  │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│                   BIFROST                        │
+│                                                  │
+│  Camada 1 — directives/                          │
+│  SOPs em Markdown: define o QUE fazer            │
+│                 ↓                                │
+│  Camada 2 — .harness/doe/                        │
+│  Orquestração: COMO o agente age                 │
+│  diretrizes.md · orquestracao.md · execucao.md   │
+│                 ↓                                │
+│  Camada 3 — execution/                           │
+│  Scripts determinísticos: FAZ de forma confiável │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## As 3 Camadas
+## As 3 Camadas — Como Usar
 
-### Camada 1 — Directives (O que fazer)
-- SOPs escritos em Markdown que vivem em `directives/`
-- Definem objetivo, entradas, ferramentas a usar, saídas e edge cases
-- Instruções em linguagem natural, como você daria a um profissional sênior
-- **Você não modifica directives sem permissão explícita**
+### Camada 1 — Directives (`directives/`)
+SOPs escritos em Markdown. Definem objetivo, entradas, ferramentas, saídas e edge cases.
+**Você não modifica directives sem permissão explícita.**
 
-### Camada 2 — Agente / Orquestração (Você)
-- Sua função: **roteamento inteligente**
-- Ler directives → chamar ferramentas na ordem correta → lidar com erros
-- Você **não tenta fazer tudo manualmente** — lê a directive, formula entradas/saídas,
-  chama o script correto em `execution/`
-- Você é a ponte entre intenção e execução
+### Camada 2 — Orquestração (`.harness/doe/`)
+Você é a Camada 2. Sua função: roteamento inteligente.
+- Leia `.harness/index.md` → identifique a directive com match
+- Carregue **apenas** a directive relevante (lazy loading)
+- Chame scripts de `execution/` na ordem correta
+- Nunca execute o que pode ser delegado a um script determinístico
 
-### Camada 3 — Execution (Fazer o trabalho)
-- Scripts determinísticos em `execution/`
-- Confiáveis, testáveis, bem comentados
-- Variáveis de ambiente e tokens vivem no `.env`
-- **Prefira sempre scripts existentes** — verifique `execution/` antes de criar novos
+### Camada 3 — Execution (`execution/`)
+Scripts Python determinísticos. Confiáveis, testáveis, bem comentados.
+**Verifique `execution/` antes de criar qualquer script novo.**
+
+---
+
+## Hierarquia de Memória *(v2.1.0)*
+
+O contexto é carregado em 5 níveis — do mais permanente ao mais efêmero.
+Quando o contexto apertar, descarte de baixo para cima:
+
+```
+L0 — AGENTS.md              → regras fixas · sempre presente · nunca descartar
+L1 — .harness/index.md      → índice leve · sempre presente · nunca descartar
+L2 — .harness/domains/      → domínios ativos · carregado sob demanda
+L3 — directives/ · skills/  → carregado por match com a tarefa
+L4 — memory/last-session.md → contexto da sessão atual · descartável após /wrap-session
+```
+
+**Regra de compressão:** quando precisar liberar contexto, descarte L4 primeiro,
+depois L3, nunca L0 ou L1.
+
+---
+
+## Três Tiers de Permissão *(v2.1.0)*
+
+Consulte esta tabela antes de qualquer ação. Em caso de dúvida → suba um tier.
+
+### ✅ PODE fazer sem pedir
+- Ler qualquer arquivo do projeto
+- Rodar testes (`npm test`, `pytest`, etc.)
+- Gerar código novo em `src/`, `app/`, `components/`
+- Criar arquivos em `directives/`, `docs/`, `execution/`
+- Executar scripts de `execution/` com `--dry-run`
+- Buscar informação na web
+- Criar ou atualizar `claude-progress.txt`
+
+### ⚠️ DEVE perguntar antes
+- Deletar qualquer arquivo
+- Modificar arquivos de configuração (`package.json`, `tsconfig.json`, etc.)
+- Chamar APIs externas com efeitos colaterais (POST, PUT, DELETE)
+- Instalar dependências (`npm install`, `pip install`)
+- Modificar `.github/workflows/`
+- Executar scripts de `execution/` sem `--dry-run`
+- Fazer commit ou push no git
+
+### 🚫 NUNCA pode fazer
+- Modificar arquivos em `protected_paths` do `.harness/config.json`
+- Alterar `.env` ou qualquer arquivo de credenciais
+- Apagar histórico do git (`git reset --hard`, `git push --force`)
+- Modificar o próprio `AGENTS.md` sem instrução explícita
+- Executar comandos destrutivos irreversíveis
 
 ---
 
 ## Regras Absolutas
 
 1. **Nunca avance** sem validar o output da etapa anterior
-2. **Nunca invente** — se não tiver certeza, marque `[VERIFICAR: motivo]`
-3. **Nunca quebre** a arquitetura de camadas de `/docs/architecture.md`
-4. **Nunca use** `any` em TypeScript nem ignore erros silenciosamente
-5. **Verifique `execution/` primeiro** — só crie script novo se não existir
-6. **Aplique o Protocolo PEV** em tarefas com 3+ arquivos envolvidos
-7. **Aplique a Regra de Hashimoto**: cada erro vira melhoria permanente no harness
+2. **Nunca invente** — marque `[VERIFICAR: motivo]`
+3. **Nunca quebre** a arquitetura de camadas de `docs/architecture.md`
+4. **Verifique `execution/`** antes de criar script novo
+5. **Nunca use** `any` em TypeScript nem ignore erros silenciosamente
+6. **Aplique o Protocolo PEV** em tarefas com 3+ arquivos
+7. **Aplique a Regra de Hashimoto**: cada erro melhora o harness
+8. **Classifique a intenção** antes de executar (Intent Gate)
 
 ---
 
-## Protocolo PEV (obrigatório para tarefas complexas)
+## Intent Gate — Classifique Antes de Agir
+
+Antes de qualquer execução, identifique:
+
+| Intenção | Exemplos | Ação |
+|----------|----------|------|
+| **Pesquisa** | "o que é X?", "como funciona Y?" | Responda direto, sem carregar directives |
+| **Implementação** | "crie X", "implemente Y" | Carregue directive do domínio + PEV |
+| **Investigação** | "por que X quebrou?" | Carregue `directives/diagnose.md` |
+| **Correção** | "corrija X", "fix Y" | Carregue directive + PEV + Hashimoto |
+| **Revisão** | "revise X", "audit Y" | Carregue `directives/observation-masking.md` |
+
+**Se a intenção não estiver clara → pergunte antes de executar.**
+
+---
+
+## Protocolo PEV
 
 ```
-PLAN    → liste tarefas + critérios verificáveis antes de qualquer código
-EXECUTE → implemente estritamente dentro do plano aprovado
-VERIFY  → confirme cada critério; falha = volta ao Plan com contexto de erro
+PLAN    → critérios verificáveis antes de qualquer código
+EXECUTE → estritamente dentro do plano aprovado
+VERIFY  → falha = volta ao Plan com contexto de erro
 ```
 
 ---
 
-## Loop de Self-Annealing (auto-fortalecimento)
+## Protocolo de Output Conciso
 
-Quando algo quebrar:
-1. Leia o erro e stack trace completo
-2. Corrija o script/código
-3. Teste e confirme que funciona
-4. Atualize a directive com o aprendizado (limites de API, edge cases, etc.)
-5. Se for erro recorrente → atualize o harness (Regra de Hashimoto)
+### Formato obrigatório
 
-> Erros são oportunidades de fortalecimento do sistema — nunca apenas corrija,
-> sempre pergunte: "onde o harness falhou em prevenir isso?"
+| Situação | Formato |
+|----------|---------|
+| Sucesso | Máximo 3 linhas — apenas o resultado |
+| Falha | `ERRO:` / `CAUSA:` / `AÇÃO:` |
+| Progresso | Uma linha por etapa concluída |
+| Confirmação | "✓ feito" |
+| Output longo | Use Observation Masking |
+
+### Frases Proibidas — Desperdício de Tokens
+
+| Proibido | Tokens desperdiçados | Substituto |
+|---------|---------------------|-----------|
+| "Vou ser feliz em ajudar com isso" | 8 | [silêncio — apenas execute] |
+| "O motivo pelo qual isso está acontecendo é" | 7 | [vá direto à causa] |
+| "Eu recomendaria que você considerasse" | 7 | [afirme diretamente] |
+| "Claro, deixa eu dar uma olhada nisso" | 8 | [olhe e responda] |
+| "Entendido, vou fazer exatamente o que você pediu" | 9 | [execute] |
+| "Ótima pergunta!" | 3 | [responda a pergunta] |
+| "Como solicitado..." | 3 | [execute] |
+| "Parece que..." | 3 | [afirme ou pergunte] |
+
+**Total evitável por resposta: 20-40 tokens de pura educação sem valor técnico.**
 
 ---
 
-## Formato de Output
+## Lazy Loading de Directives
 
-| Tipo    | Formato |
-|---------|---------|
-| Sucesso | Silencioso — apenas o resultado |
-| Falha   | `ERRO: [o que]` · `CAUSA: [por quê]` · `AÇÃO: [o que fazer]` |
-| Código  | Tipos explícitos, sem `any`, sem `console.log` em produção |
-| JSON    | Schema fixo conforme `/docs/domain-rules.md` |
+```
+1. Leia .harness/index.md (leve — 1-2 linhas por directive)
+2. Identifique qual tem match com a tarefa
+3. Carregue APENAS essa directive
+4. Se nenhuma fizer match → execute sem carregar nada extra
+```
+
+### Progressive Disclosure — Leitura Incremental
+
+```bash
+# ❌ Não faça
+cat src/services/contrato-service.ts
+
+# ✅ Faça
+grep -n "gerarPDF" src/services/contrato-service.ts
+head -50 src/services/contrato-service.ts
+```
+
+### Observation Masking
+
+Outputs > 20 linhas → substitua por placeholder:
+```
+[Logs omitidos — 847 linhas | Resultado: FALHA | Erro: timeout linha 42]
+[Testes omitidos — 47 testes | Status: 46 PASS, 1 FALHA]
+```
+
+### Roteamento de Modelos
+
+| Tarefa | Modelo | Motivo |
+|--------|--------|--------|
+| Docs, testes simples, formatação | Haiku / Mini | mecânica |
+| Código, implementação | Sonnet / padrão | equilíbrio |
+| Arquitetura, debugging difícil | Opus / Pro | raciocínio profundo |
+
+### Budget por Tipo de Tarefa
+
+| Tipo | Max Contexto | Max Output | Modelo |
+|------|-------------|-----------|--------|
+| Análise simples | 8k | 1k | Haiku |
+| Geração de código | 20k | 4k | Sonnet |
+| Revisão de documento | 30k | 6k | Sonnet |
+| Debug complexo | 40k | 8k | Opus |
+| Arquitetura | 50k | 10k | Opus |
 
 ---
 
-## Organização de Arquivos
+## Memória de Sessão
 
-```
-directives/          → SOPs em Markdown (o que fazer)
-execution/           → Scripts determinísticos (como executar)
-.harness/
-  doe/               → Templates de prompt por camada (D·O·E)
-  pev/               → Templates do ciclo Plan·Execute·Verify
-  domains/           → Regras por tipo de projeto (saas, api, etc.)
-  skills/            → Skills instaladas (locais + buscadas do repositório)
-  quality-gates/     → Hooks e verificações automáticas
-docs/
-  architecture.md    → Decisões arquiteturais (ADRs)
-  domain-rules.md    → Regras de negócio e schemas
-  coding-standards.md→ Padrões de código
-.tmp/                → Arquivos intermediários (sempre regeneráveis)
-```
+**Ao iniciar:** leia `.harness/memory/last-session.md` se existir.
+**Ao encerrar:** salve contexto em `.harness/memory/last-session.md`.
+**Claude Code:** `/wrap-session` e `/brief-session`.
+**Outros runtimes:** leia `directives/session-memory.md`.
 
-> **Deliverables** vivem na nuvem (Google Sheets, Drive, etc.)
-> **Intermediários** vivem em `.tmp/` — podem ser apagados a qualquer momento
+---
+
+## Compressão de Histórico
+
+Após **8 turnos**, execute:
+```bash
+python execution/compress-history.py --auto
+```
+Ou Claude Code: `/context-check --compress`
 
 ---
 
 ## Domínios Ativos
-
-> Marque os domínios deste projeto. Leia os arquivos correspondentes antes de trabalhar.
 
 - [ ] SaaS Web              → `.harness/domains/saas.md`
 - [ ] API / Backend         → `.harness/domains/api.md`
@@ -137,16 +242,22 @@ docs/
 
 ## Skills Instaladas
 
-> Skills disponíveis para uso neste projeto.
-> Leia a skill relevante antes de executar a tarefa correspondente.
+> Instale novas: `npx harness-engineering skill <nome>`
 
-<!-- Skills locais do projeto -->
-- `.harness/skills/SKILL-template.md` → template para criar novas skills
-
-<!-- Skills buscadas do repositório externo serão adicionadas aqui automaticamente -->
-<!-- Use: bash scripts/fetch-skill.sh <nome> -->
+- `.harness/skills/SKILL-template.md` → template para criar skills
 
 ---
 
-*Harness v1.0.0 — inicializado em [data]*
-*Documentação: `/docs/` · Suporte: `bash scripts/health-check.sh`*
+## Evolução do Harness
+
+Quando encontrar um erro → aplique Hashimoto:
+1. Corrija o código
+2. Identifique onde o harness falhou
+3. Atualize a directive correspondente
+4. Commit: `harness(tipo): descrição`
+
+Referência completa: `directives/harness-evolution.md`
+
+---
+
+*Bifrost v2.0.0*
