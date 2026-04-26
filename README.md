@@ -49,17 +49,22 @@ A diferença não foi o modelo. Foi o ambiente ao redor dele.
 
 Na mitologia nórdica, **Bifrost** é a ponte que conecta todos os mundos — a única via que funciona entre qualquer reino.
 
-```
-╔═══════════════════════════════════════════════════════════════╗
-║                        BIFROST                                ║
-║                                                               ║
-║   Claude Code ──────┐                                         ║
-║   Antigravity ──────┤──── AGENTS.md ──── seu projeto          ║
-║   OpenCode    ──────┤     CLAUDE.md                           ║
-║   Cursor      ──────┘     GEMINI.md                           ║
-║                                                               ║
-║   Um harness. Qualquer runtime. Mesmas regras.                ║
-╚═══════════════════════════════════════════════════════════════╝
+## Arquitetura de 3 Camadas
+
+```mermaid
+flowchart TD
+    User(["👤 Usuário"])
+    subgraph Runtime["Runtime — Claude Code · Antigravity · OpenCode · Cursor"]
+        AGENTS["📄 AGENTS.md\nCLAUDE.md · GEMINI.md"]
+    end
+    subgraph Bifrost["🌉 BIFROST"]
+        C1["Camada 1\ndirectives/\nSOPs — o QUE fazer"]
+        C2["Camada 2\n.harness/doe/\nOrquestração — COMO agir"]
+        C3["Camada 3\nexecution/\nScripts — FAZ de forma confiável"]
+        C1 --> C2 --> C3
+    end
+    User --> Runtime --> Bifrost
+    Bifrost --> Output(["✅ Resultado confiável"])
 ```
 
 Bifrost é o harness que transforma um modelo probabilístico em um sistema confiável em produção — **sem precisar de Docker, banco de dados, Python runtime ou qualquer infraestrutura extra.**
@@ -91,6 +96,19 @@ npx harness-engineering skill --bundle essentials
 
 # Ver todas as opções
 npx harness-engineering skill --list
+```
+
+---
+
+## Fluxo SDLC Completo
+
+```mermaid
+flowchart LR
+    S(["/spec\nEspecificação"]) --> P(["/plan\nDecomposição"])
+    P --> B(["Build\nImplementação"])
+    B --> R(["/review\nQuality Gate"])
+    R -->|aprovado| SH(["/ship\nDeploy"])
+    R -->|reprovado| B
 ```
 
 ---
@@ -216,33 +234,38 @@ em .harness/memory/last-session.md
 1. Salve com `/wrap-session` ou equivalente
 2. No novo runtime: `Leia .harness/memory/last-session.md e me dê um briefing`
 
+## Fluxo de Memória entre Sessões
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant A as Agente
+    participant M as .harness/memory/
+
+    U->>A: /brief-session
+    A->>M: lê last-session.md (~500 tokens)
+    M-->>A: contexto da sessão anterior
+    A-->>U: briefing resumido
+
+    Note over U,A: trabalho normal...
+
+    U->>A: /wrap-session
+    A->>M: salva last-session.md
+    A-->>U: ✓ contexto salvo
+```
+
 ---
 
 ## Economia de Tokens
 
 Bifrost corta **50–70% do consumo** com cinco técnicas:
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Lazy Loading      Carrega só a directive relevante  │
-│  antes: 15k tokens                                   │
-│  depois: 3k tokens        ▓▓▓░░░░░░░░░░ -80%        │
-├─────────────────────────────────────────────────────┤
-│  Observation Masking    Logs longos → placeholder    │
-│  [Logs omitidos — FALHA | timeout linha 42]          │
-│                                       ▓▓▓░░░░ -52%  │
-├─────────────────────────────────────────────────────┤
-│  Roteamento de Modelos                               │
-│  Docs/testes  → Haiku      (até -95% de custo)      │
-│  Código       → Sonnet     (equilíbrio)              │
-│  Arquitetura  → Opus       (quando necessário)       │
-├─────────────────────────────────────────────────────┤
-│  Progressive Disclosure   Lê só o trecho necessário  │
-│  grep -n "função" arquivo.ts  em vez de cat inteiro  │
-├─────────────────────────────────────────────────────┤
-│  Compressão de Histórico  Após 8 turnos              │
-│  python execution/compress-history.py --auto         │
-└─────────────────────────────────────────────────────┘
+```mermaid
+xychart-beta
+    title "Redução de tokens por técnica"
+    x-axis ["Lazy Loading", "Progressive Disclosure", "Obs. Masking", "Compressão"]
+    y-axis "Redução %" 0 --> 100
+    bar [80, 70, 52, 45]
 ```
 
 ---
