@@ -1,6 +1,6 @@
 # CLAUDE.md — Bifrost Universal Harness
 <!-- Runtime: Claude Code -->
-<!-- Versão: 2.3.0 -->
+<!-- Versão: 2.4.0 -->
 
 > Leia este arquivo completamente antes de qualquer ação.
 > Este arquivo é específico para Claude Code — para outros runtimes use GEMINI.md ou AGENTS.md.
@@ -172,6 +172,24 @@ Outputs > 20 linhas → placeholder:
 
 ---
 
+## Context7 — Documentação Atualizada *(v2.4.0)*
+
+Antes de implementar com qualquer biblioteca externa cuja versão importa:
+
+```bash
+ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /prisma/prisma "relations"
+ctx7 docs /colinhacks/zod "form validation"
+ctx7 library [nome]  # para encontrar o ID
+```
+
+Quando usar: versão importa · primeira vez com a API · configuração/setup
+Não usar: operações básicas · já consultou nesta sessão
+
+Setup (uma vez): `npx ctx7 setup --claude`
+
+---
+
 ## Comandos Claude Code
 
 ```
@@ -227,4 +245,4 @@ Erro encontrado → Hashimoto:
 
 ---
 
-*Bifrost v2.3.0 — Claude Code*
+*Bifrost v2.4.0 — Claude Code*

@@ -14,7 +14,7 @@
 
 [![npm](https://img.shields.io/npm/v/harness-engineering?style=flat-square&color=000)](https://www.npmjs.com/package/harness-engineering)
 [![MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![v2.3.0](https://img.shields.io/badge/versão-2.3.0-purple?style=flat-square)](#changelog)
+[![v2.4.0](https://img.shields.io/badge/versão-2.4.0-purple?style=flat-square)](#changelog)
 [![runtimes](https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Antigravity%20%7C%20OpenCode-green?style=flat-square)](#compatibilidade)
 
 </div>
@@ -274,6 +274,62 @@ Mostra: sessões, tokens economizados, taxa de sucesso, aprendizados Hashimoto, 
 
 ---
 
+## Context7 — Documentação Sempre Atualizada *(v2.4.0)*
+
+O modelo foi treinado em uma data específica. As bibliotecas evoluem. Sem Context7, o agente pode gerar código com APIs desatualizadas ou que mudaram de sintaxe.
+
+```
+Sem Context7:
+  Next.js 14 API → agente usa Pages Router → erro → 3 turnos de correção = 20k tokens
+
+Com Context7:
+  ctx7 docs /vercel/next.js "middleware" → 3k tokens de docs atuais → implementação correta
+```
+
+### Por Runtime
+
+**Claude Code / OpenCode / Cursor — setup nativo:**
+```bash
+npx ctx7 setup --claude     # Claude Code
+npx ctx7 setup --opencode   # OpenCode
+npx ctx7 setup --cursor     # Cursor
+
+# Uso:
+ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /prisma/prisma "one-to-many relations"
+ctx7 docs /colinhacks/zod "form validation"
+ctx7 library [nome]          # encontra o ID
+```
+
+**Antigravity — sem suporte nativo, use web search:**
+```
+"Busque a documentação oficial do Next.js 15 sobre middleware
+e use a versão atual da API antes de implementar."
+```
+
+### Quando usar (regra seletiva)
+
+```
+✅ USE: versão importa · primeira vez com a API · setup/config/auth
+❌ NÃO: operações básicas · já consultou nesta sessão · libs nativas
+```
+
+### Bibliotecas mais usadas
+
+| Biblioteca | ID Context7 |
+|-----------|------------|
+| Next.js | `/vercel/next.js` |
+| React | `/facebook/react` |
+| Prisma | `/prisma/prisma` |
+| Zod | `/colinhacks/zod` |
+| Tailwind | `/tailwindlabs/tailwindcss` |
+| Supabase | `/supabase/supabase` |
+| FastAPI | `/tiangolo/fastapi` |
+| Pydantic | `/pydantic/pydantic` |
+| ShadCN UI | `/shadcn-ui/ui` |
+
+---
+
 ## Quality Gate
 
 | Verificação | O que bloqueia |
@@ -329,6 +385,14 @@ npx harness-engineering skill --bundle sdlc  # ciclo completo de entrega
 ---
 
 ## Changelog
+
+### v2.4.0
+- ✨ Context7 — documentação atualizada antes de implementar com libs externas
+- ✨ `.harness/skills/context7/SKILL.md` — skill com suporte Claude Code, OpenCode, Cursor
+- ✨ `GEMINI.md` — alternativa via web search para Antigravity
+- ✨ Regra seletiva de uso (não usa para tudo — economiza tokens)
+- 🔄 `AGENTS.md` · `CLAUDE.md` · `GEMINI.md` — seção Context7 integrada
+- 🔄 `.harness/index.md` — skill Context7 indexada
 
 ### v2.3.0
 - ✨ Viés do Avaliador no `/review` e `agents/code-reviewer.md`
@@ -396,6 +460,7 @@ npx harness-engineering skill --bundle sdlc  # ciclo completo de entrega
 12. Spec antes de código          · v2.0.0
 13. Ceticismo ativo no review     · v2.3.0
 14. Validação antes da ação       · v2.3.0
+15. Docs atualizadas antes de implementar · v2.4.0
 ```
 
 ---

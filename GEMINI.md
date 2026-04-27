@@ -1,6 +1,6 @@
 # GEMINI.md — Bifrost Universal Harness
 <!-- Runtime: Antigravity · Gemini CLI · OpenCode -->
-<!-- Versão: 2.3.0 -->
+<!-- Versão: 2.4.0 -->
 
 > Leia este arquivo antes de qualquer ação.
 > Este arquivo é específico para Antigravity e runtimes baseados em Gemini.
@@ -98,6 +98,31 @@ VERIFY  → máximo 3 linhas de resposta
 2. Identifique directive com match
 3. Carregue APENAS essa directive
 ```
+
+---
+
+## Documentação Atualizada — Alternativa ao Context7 *(v2.4.0)*
+
+O Antigravity não tem suporte nativo ao Context7.
+Use a busca web integrada como substituto:
+
+**Quando a versão de uma biblioteca importa:**
+```
+Antes de implementar, busque na web:
+"[biblioteca] [versão] [tópico] documentation site:docs.[biblioteca].com"
+
+Exemplo:
+"Next.js 15 middleware authentication documentation site:nextjs.org"
+"Prisma 5 one-to-many relations site:prisma.io"
+```
+
+**Ou rode no terminal e cole o resultado:**
+```bash
+npx ctx7 docs /vercel/next.js "middleware" --no-install
+```
+
+Quando usar: versão importa · primeira vez com a API · configuração/setup
+Não usar: operações básicas · já consultou nesta sessão
 
 ---
 
@@ -206,4 +231,4 @@ Erro encontrado → Hashimoto:
 
 ---
 
-*Bifrost v2.3.0 — Antigravity / Gemini*
+*Bifrost v2.4.0 — Antigravity / Gemini*

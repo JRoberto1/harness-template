@@ -1,6 +1,6 @@
 # AGENTS.md — Bifrost Universal Harness
 <!-- Claude Code · Antigravity · OpenCode · Cursor · Copilot -->
-<!-- Versão: 2.3.0 -->
+<!-- Versão: 2.4.0 -->
 
 > Leia este arquivo completamente antes de qualquer ação.
 > Arquivo universal — lido por qualquer runtime.
@@ -206,6 +206,36 @@ Após 8 turnos:
 python execution/compress-history.py --auto
 ```
 Claude Code: `/context-check --compress`
+
+---
+
+## Context7 — Documentação Atualizada *(v2.4.0)*
+
+Antes de implementar com qualquer biblioteca externa, verifique se a API está atualizada.
+
+### Quando usar (seletivo — não use para tudo)
+
+```
+✅ USE: versão importa · primeira vez com a API · configuração/middleware/auth
+❌ NÃO USE: operações básicas · bibliotecas nativas · já consultou nesta sessão
+```
+
+### Por runtime
+
+**Claude Code / OpenCode / Cursor:**
+```bash
+ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /prisma/prisma "one-to-many relations"
+ctx7 docs /colinhacks/zod "form validation"
+```
+
+**Antigravity (sem suporte nativo):**
+```
+Busque a documentação oficial da versão [X] de [biblioteca]
+sobre [tópico] antes de implementar.
+```
+
+Referência completa: `.harness/skills/context7/SKILL.md`
 
 ---
 
